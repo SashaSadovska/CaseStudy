@@ -1,0 +1,86 @@
+Database        : crn:v1:bluemix:public:dashdb-for-transactions:us-south:a/2cf90ad10ddb494a962883e267c4840f:8cd30177-ac75-4586-bb32-a24d450193ef::
+Host name       : db2-icd-prod-us-south-db-ywe5s-private-alb.db2.databases.appdomain.cloud                                                        
+Authorization Id: vlx42662                                                                                                                        
+Run method      : JDBC                                                                                                                                                                                                                               
+Status          : completed                                                                                                                       
+
+
+=======================================================================================
+-- REVENUE PER USER & LIFT BETWEEN TEST AND CONTROL
+
+SELECT POPULATION AS GROUP, 
+	COUNT(USER_ID) AS USERS, 
+	SUM(ORDER_VALUE) AS REVENUE, 
+	DECIMAL(AVG(ORDER_VALUE),5,2) AS REVENUE_PER_USER,
+	(SELECT INT(100*(T.RPU-C.RPU)/C.RPU) AS "LIFT, %" 
+		FROM 
+		(SELECT POPULATION, AVG(ORDER_VALUE) RPU
+		FROM ABTEST GROUP BY POPULATION) AS C 
+		JOIN
+		(SELECT POPULATION, AVG(ORDER_VALUE) RPU
+		FROM ABTEST GROUP BY POPULATION) AS T
+		ON C.POPULATION='control' AND T.POPULATION='test')
+FROM ABTEST
+GROUP BY POPULATION
+
+Run time (seconds): 0.014    
+Status            : succeeded
+
+GROUP   USERS REVENUE   REVENUE_PER_USER LIFT, %
+------- ----- --------- ---------------- -------
+control   302  57153.00           189.24      43
+test      700 190540.90           272.20      43
+
+
+=======================================================================================
+-- NUMBER OF PURCHASES PER USER & LIFT BETWEEN TEST AND CONTROL
+
+SELECT POPULATION AS GROUP, 
+	COUNT(USER_ID) AS USERS, 
+	SUM(SALES) AS PURCHASES, 
+	DECIMAL(AVG(DECIMAL(SALES)),3,2) AS PURCHASE_PER_USER,
+	(SELECT INT(100*(T.PPU-C.PPU)/C.PPU) AS "LIFT, %" 
+		FROM 
+		(SELECT POPULATION, AVG(DECIMAL(SALES)) PPU
+		FROM ABTEST GROUP BY POPULATION) AS C 
+		JOIN
+		(SELECT POPULATION, AVG(DECIMAL(SALES)) PPU
+		FROM ABTEST GROUP BY POPULATION) AS T
+		ON C.POPULATION='control' AND T.POPULATION='test')
+FROM ABTEST
+GROUP BY POPULATION
+
+Run time (seconds): 0.013    
+Status            : succeeded
+
+GROUP   USERS PURCHASES PURCHASE_PER_USER LIFT, %
+------- ----- --------- ----------------- -------
+control   302       539              1.78      15
+test      700      1447              2.06      15
+
+
+=======================================================================================
+-- AVERAGE SALE REVENUE PER USER & LIFT BETWEEN TEST AND CONTROL
+
+SELECT POPULATION AS GROUP, 
+	COUNT(USER_ID) AS USERS, 
+	DECIMAL(SUM(ORDER_VALUE)/SUM(SALES),5,2) AS AVG_SALE_REVENUE_PER_USER, 
+	(SELECT INT(100*(T.OSRPU-C.OSRPU)/C.OSRPU) AS "LIFT, %" 
+		FROM 
+		(SELECT POPULATION, SUM(ORDER_VALUE)/SUM(SALES) OSRPU
+		FROM ABTEST GROUP BY POPULATION) AS C 
+		JOIN
+		(SELECT POPULATION, SUM(ORDER_VALUE)/SUM(SALES) OSRPU
+		FROM ABTEST GROUP BY POPULATION) AS T
+		ON C.POPULATION='control' AND T.POPULATION='test')
+FROM ABTEST
+GROUP BY POPULATION
+
+Run time (seconds): 0.012    
+Status            : succeeded
+
+GROUP   USERS AVG_SALE_REVENUE_PER_USER LIFT, %
+------- ----- ------------------------- -------
+control   302                    106.03      24
+test      700                    131.67      24
+
